@@ -1,0 +1,4 @@
+#!/usr/bin/env node
+'use strict';
+const fs=require('fs/promises'),path=require('path'); const {DatabaseSync,backup}=require('node:sqlite');
+(async()=>{const dbPath=process.env.DB_PATH||'/data/fasttrack.db',dir=process.env.BACKUP_DIR||'/backups';await fs.mkdir(dir,{recursive:true,mode:0o700});const src=new DatabaseSync(dbPath,{readOnly:true,allowExtension:false,timeout:5000}),stamp=new Date().toISOString().replace(/[:.]/g,'-'),tmp=path.join(dir,`fasttrack-manual-${stamp}.sqlite3.tmp`),out=tmp.replace(/\.tmp$/,'');try{await backup(src,tmp,{rate:100})}finally{src.close()}const verify=new DatabaseSync(tmp,{readOnly:true,allowExtension:false});const result=Object.values(verify.prepare('PRAGMA quick_check').get())[0];verify.close();if(result!=='ok')throw new Error(`Backup verification failed: ${result}`);await fs.rename(tmp,out);await fs.chmod(out,0o600).catch(()=>{});console.log(out)})().catch(e=>{console.error(e);process.exit(1)});

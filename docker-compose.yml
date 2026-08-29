@@ -1,0 +1,44 @@
+services:
+  fasttrack:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        FASTTRACK_VERSION: ${FASTTRACK_VERSION:-2.2.0}
+    image: ${FASTTRACK_IMAGE:-ghcr.io/theqldcoalminer/fasttrack:latest}
+    container_name: fasttrack
+    restart: unless-stopped
+    ports:
+      - "${FASTTRACK_PORT:-3004}:8080"
+    environment:
+      NODE_ENV: production
+      PORT: "8080"
+      DB_PATH: /data/fasttrack.db
+      LEGACY_DATA_DIR: /data/app_data
+      BACKUP_DIR: /backups
+      FASTTRACK_VERSION: ${FASTTRACK_VERSION:-2.2.0}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-12}
+      BACKUPS_ENABLED: ${BACKUPS_ENABLED:-true}
+      BACKUP_ON_START: ${BACKUP_ON_START:-true}
+      BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-24}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+    volumes:
+      - fasttrack-data:/data
+      - fasttrack-backups:/backups
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  fasttrack-data:
+    name: fasttrack-data
+  fasttrack-backups:
+    name: fasttrack-backups
